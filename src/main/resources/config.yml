@@ -1,0 +1,13 @@
+# LoxStorm SMP config
+
+# Countdown length (seconds) shown before the SMP starts
+countdown-seconds: 10
+
+# How long PvP stays disabled after the SMP starts (seconds).
+# Change in-game with: /lssmp cd <time>   e.g. 30s, 5m, 1h, 1h30m
+pvp-disabled-seconds: 600
+
+# Golden apples given to every online player when PvP turns on
+reward:
+  enabled: true
+  golden-apples: 10

@@ -1,0 +1,15 @@
+name: LoxStormSMP
+version: 1.0.0
+main: com.loxstorm.smp.LoxStormSMP
+api-version: "1.16"
+author: STORM SMP x LoxterSMP
+description: LoxStorm SMP start sequence, PvP timer and rewards.
+commands:
+  lssmp:
+    description: LoxStorm SMP main command
+    usage: /<command> <st|cd|stop|status|reload>
+    aliases: [loxstorm]
+permissions:
+  lssmp.admin:
+    description: Use all /lssmp commands
+    default: op

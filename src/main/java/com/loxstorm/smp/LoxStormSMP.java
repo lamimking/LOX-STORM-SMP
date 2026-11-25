@@ -3,6 +3,7 @@ package com.loxstorm.smp;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
@@ -17,6 +18,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.projectiles.ProjectileSource;
@@ -38,6 +40,7 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
     private final List<BukkitTask> tasks = new ArrayList<>();
     private boolean pvpEnabled = true;
     private boolean running = false;
+    private boolean frozen = false;
     private long pvpEndsAtMillis = 0;
 
     @Override
@@ -53,6 +56,7 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
 
     @Override
     public void onDisable() {
+        frozen = false;
         cancelTasks();
     }
 
@@ -107,6 +111,7 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
                 }
                 cancelTasks();
                 running = false;
+                frozen = false;
                 pvpEnabled = true;
                 sender.sendMessage(PREFIX + "§eSequence stopped. PvP is now enabled (no rewards given).");
                 return true;
@@ -172,6 +177,9 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
         int countdown = Math.max(3, getConfig().getInt("countdown-seconds", 10));
         long pvpSeconds = Math.max(1, getConfig().getLong("pvp-disabled-seconds", 600));
 
+        // Freeze everyone during the starting popup + countdown
+        frozen = getConfig().getBoolean("freeze-during-countdown", true);
+
         // 1) "STARTING" popup
         title("§6§lLOXSTORM SMP", "§eSTARTING...", 10, 50, 10);
         sound(Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
@@ -188,8 +196,9 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
             delay += 20;
         }
 
-        // 3) STARTED
+        // 3) STARTED (unfreeze everyone)
         later(delay, () -> {
+            frozen = false;
             title("§a§lLOXSTORM SMP", "§fSTARTED", 10, 50, 15);
             sound(Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1f);
         });
@@ -220,6 +229,7 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
         cancelTasks();
         pvpEnabled = true;
         running = false;
+        frozen = false;
         pvpEndsAtMillis = 0;
 
         title("§a§lPVP ENABLED", "§7Fight fair. Good luck!", 10, 60, 15);
@@ -258,6 +268,27 @@ public class LoxStormSMP extends JavaPlugin implements Listener, CommandExecutor
 
         e.setCancelled(true);
         attacker.sendMessage(PREFIX + "§cPvP is disabled right now.");
+    }
+
+    // ------------------------------------------------------------------
+    // Freeze during countdown (no walking, no jumping; looking around is allowed)
+    // ------------------------------------------------------------------
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onMove(PlayerMoveEvent e) {
+        if (!frozen) return;
+        Location from = e.getFrom();
+        Location to = e.getTo();
+        if (to == null) return;
+
+        boolean movedSideways = from.getX() != to.getX() || from.getZ() != to.getZ();
+        boolean wentUp = to.getY() > from.getY();
+        if (movedSideways || wentUp) {
+            Location back = from.clone();
+            back.setYaw(to.getYaw());
+            back.setPitch(to.getPitch());
+            e.setTo(back);
+        }
     }
 
     @EventHandler
